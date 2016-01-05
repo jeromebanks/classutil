@@ -189,6 +189,11 @@ trait MethodInfo extends BaseInfo {
     * throws, or an empty list if it throws no known checked exceptions.
     */
   val exceptions: List[String]
+  
+  /**
+   * A List of annotations assigned to the method
+   */
+  def annotations: List[AnnotationInfo]
 
   /** A printable version of the method. Currently, the string is
     * the method name plus descriptor.

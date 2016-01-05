@@ -40,14 +40,12 @@
 package org.clapper.classutil.asm
 
 import org.clapper.classutil._
-
 import scala.collection.mutable.{Set => MutableSet, ArrayBuilder}
 import scala.collection.mutable.HashMap
-
 import org.objectweb.asm._
-
 import java.io.{File, InputStream, IOException}
 import scala.Some
+import scala.collection.mutable.MutableList
 
 
 private[classutil] object ASMBitmapMapper {
@@ -99,9 +97,9 @@ extends ClassInfo with ASMBitmapMapper {
   def fields      = Set.empty[FieldInfo] ++ fieldSet
   def annotations = Set.empty[AnnotationInfo] ++ annotationSet
 
-  var methodSet = MutableSet.empty[MethodInfo]
-  var fieldSet = MutableSet.empty[FieldInfo]
-  var annotationSet = MutableSet.empty[AnnotationInfo]
+  val methodSet = MutableSet.empty[MethodInfo]
+  val fieldSet = MutableSet.empty[FieldInfo]
+  val annotationSet = MutableSet.empty[AnnotationInfoImpl]
   val modifiers = mapModifiers(access, ASMBitmapMapper.AccessMap)
 }
 
@@ -112,6 +110,10 @@ private[classutil] class MethodInfoImpl(val name: String,
                                         val access: Int)
 extends MethodInfo with ASMBitmapMapper {
   val modifiers = mapModifiers(access, ASMBitmapMapper.AccessMap)
+  def annotations = { annotationSet.toList }
+  
+  
+  val annotationSet = MutableList.empty[AnnotationInfoImpl]
 }
 
 private[classutil] class FieldInfoImpl(val name: String,
@@ -131,10 +133,24 @@ extends AnnotationInfo {
   var paramMap = HashMap.empty[String, Any]
 }
 
+
 private[classutil] class ClassVisitor(location: File)
 extends EmptyVisitor with ASMBitmapMapper {
 
-  var classes = MutableSet.empty[ClassInfo]
+  class MethodAnnotationVisitor(n : Int, methodInfo : MethodInfoImpl) extends MethodVisitor(n) {
+   override def visitAnnotation(desc : String, visible :Boolean) = {
+     println(s" VISITED ANNOTATION ${desc} ${visible}")
+     val annotationInfo = new AnnotationInfoImpl( desc, visible)
+     methodInfo.annotationSet += annotationInfo
+    
+     new AnnotationVisitor( annotationInfo)
+   }
+  
+}
+
+private[classutil] class ClassVisitor(location: File)
+
+  val classes = MutableSet.empty[ClassInfo]
   var currentClass: Option[ClassInfoImpl] = None
 
   override def visit(version: Int,
@@ -162,12 +178,13 @@ extends EmptyVisitor with ASMBitmapMapper {
     assert(currentClass != None)
     val sig = if (signature != null) signature else ""
     val excList = if (exceptions == null) Nil else exceptions.toList
-    currentClass.get.methodSet += new MethodInfoImpl(name,
-                                                     sig,
-                                                     descriptor,
-                                                     excList,
-                                                     access)
-    null
+    val methodInfo =  new MethodInfoImpl(name,
+                                           sig,
+                                           descriptor,
+                                           excList,
+                                           access)
+    currentClass.get.methodSet += methodInfo
+    new MethodAnnotationVisitor(apiVersion,methodInfo) 
   }
 
   override def visitField(access: Int,

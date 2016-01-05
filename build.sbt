@@ -5,7 +5,7 @@ name := "classutil"
 
 organization := "org.clapper"
 
-version := "1.0.6"
+version := "1.0.6-jdb"
 
 licenses := Seq(
   "BSD New" -> url("http://software.clapper.org/classutil/license.html")
