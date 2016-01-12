@@ -54,6 +54,7 @@ class ClassFinderTest extends FunSuite {
     // get the first element, not just (0), because there's an implicit
     // parameter in the way...
     val classDir = scalaDirs.take(1).map(new File(_, "classes")).apply(0)
+    
 
     // Get class files under the directory.
     val classFiles = classDir.listRecursively().
@@ -75,5 +76,38 @@ class ClassFinderTest extends FunSuite {
     // Next, check the iterator by looping over it.
     val classInfoStream = classFinder.getClasses
     assert(classInfoStream.length === totalExpected)
+  }
+
+  test("Able to find method level annotations") {
+    val directory = new File("target")
+    assert(directory.exists)
+    val scalaDirs = directory.listFiles.filter(_.getName.startsWith("scala"))
+    assert(scalaDirs.length > 0)
+
+    // Even though the take() returns an Array[File], we must use apply(0) to
+    // get the first element, not just (0), because there's an implicit
+    // parameter in the way...
+    val classDir = scalaDirs.take(1).map(new File(_, "test-classes")).apply(0)
+    
+    
+    // The number of returned classInfo objects should be the same number
+    // as the number of class files.
+    val classFinder = ClassFinder(Seq(classDir))
+    
+    classFinder.getClasses.foreach( println)
+    val annoClass = classFinder.getClasses.filter( _.name.endsWith("ExampleWAnnotation")).head
+    
+    println(s" Annotated Class is $annoClass ; Annotations = ${annoClass.annotations}")
+    
+    annoClass.annotations.filter( ! _.descriptor.contains("ScalaSignature") ).foreach( anno => { println(s" ${anno.descriptor} ; params = ${anno.params}")})
+    
+    annoClass.methods.foreach( meth => {
+      println(s" Method ${meth.name}")
+      meth.annotations.foreach( methAnno => {
+        println(s"      Annotation ${methAnno.descriptor} ; params = ${methAnno.params}")
+      })
+    })
+
+    
   }
 }
